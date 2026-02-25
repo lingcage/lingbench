@@ -1,0 +1,73 @@
+# lingbench guest rootfs — multi-stage
+#
+# Stage 1 builds benchmarks that aren't packaged by Alpine.
+# Stage 2 is the actual guest userspace: the tools from apk plus the
+# built artifacts from stage 1, an in-guest dispatcher at /lingbench/run.sh,
+# and a boot-complete marker emitted on ttyS0 for boottime measurements.
+
+# ---------- builder ----------
+FROM docker.io/library/alpine:3.20 AS builder
+
+RUN apk add --no-cache build-base git make linux-headers
+
+# CoreMark — EEMBC's reference single-thread CPU benchmark.
+# eembc/coremark only ships a `linux` port (POSIX clock_gettime); it
+# builds fine for x86_64 despite the name.
+RUN git clone --depth=1 https://github.com/eembc/coremark.git /src/coremark \
+ && make -C /src/coremark PORT_DIR=linux compile \
+ && install -Dm755 /src/coremark/coremark.exe /rootfs-extras/usr/local/bin/coremark
+
+# ---------- runtime ----------
+FROM docker.io/library/alpine:3.20
+
+# Benchmarks from apk (Alpine main+community):
+#   fio            block I/O  (virtio-blk / vhost-user-blk)
+#   iperf3         virtio-net TCP/UDP throughput
+#   wrk            HTTP load generator (for nginx)
+#   sysbench       CPU / memory / OLTP microbenchmarks
+#   stress-ng      pathological CPU / memory / syscall stressors
+#   redis          + redis-benchmark for the mixed CPU+net+syscall workload
+#   nginx          HTTP server driven by wrk
+#   memcached      second app workload for net+syscall path
+#   postgresql-client  ships pgbench for the DB workload
+#
+# Built from source in the builder stage:
+#   coremark       not in Alpine repos
+#
+# Intentionally deferred (can be added once we decide we need them):
+#   lmbench        musl build is fragile; add once stabilised
+#   netperf        not in Alpine; iperf3 covers most of the same axes
+#   UnixBench      perl-heavy and noisy; value is mostly historical
+RUN apk add --no-cache \
+    openrc busybox-openrc \
+    util-linux e2fsprogs coreutils \
+    iproute2 iputils \
+    fio iperf3 wrk \
+    sysbench stress-ng \
+    redis nginx memcached postgresql-client \
+    curl bash ca-certificates
+
+COPY --from=builder /rootfs-extras/ /
+
+COPY lingbench/ /lingbench/
+RUN chmod +x /lingbench/boot-marker.sh /lingbench/run.sh /lingbench/oneshot.sh
+
+# Allow passwordless root login on the serial console.
+# This is a benchmark VM, not a production rootfs — we want the host
+# runner (and curious humans) to drop straight into a shell on ttyS0.
+RUN passwd -d root \
+ && grep -q '^ttyS0$' /etc/securetty 2>/dev/null || echo ttyS0 >> /etc/securetty
+
+# inittab order (busybox init runs all sysinit, then all wait, then respawn):
+#   sysinit: boot-marker     — earliest possible serial marker for boottime
+#   sysinit: openrc          — alpine's existing entries (cat'd in below)
+#   wait:    oneshot         — runs the cmdline-driven scenario, powers off
+#   respawn: getty           — only reached if no scenario was passed
+RUN { \
+      printf '::sysinit:/lingbench/boot-marker.sh\n'; \
+      printf '::wait:/lingbench/oneshot.sh\n'; \
+      printf 'ttyS0::respawn:/sbin/getty -L ttyS0 115200 vt100\n'; \
+      cat /etc/inittab 2>/dev/null || true; \
+    } > /etc/inittab.new && mv /etc/inittab.new /etc/inittab
+
+CMD ["/sbin/init"]
