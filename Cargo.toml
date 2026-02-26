@@ -8,6 +8,12 @@ rust-version = "1.94"
 license = "Apache-2.0"
 authors = ["LingCage <maintainers@lingcage.com>"]
 
+[workspace.dependencies]
+anyhow = "1"
+reqwest = { version = "0.12", default-features = false, features = ["blocking", "rustls-tls"] }
+sha2 = "0.10"
+tracing = "0.1"
+
 [package]
 name = "lingbench"
 description = "LingBench, a VMM benchmarking framework (library and CLI)."
@@ -19,6 +25,12 @@ authors.workspace = true
 
 [lib]
 path = "src/lib/lib.rs"
+
+[dependencies]
+anyhow.workspace = true
+reqwest.workspace = true
+sha2.workspace = true
+tracing.workspace = true
 
 [profile.release]
 lto = "thin"

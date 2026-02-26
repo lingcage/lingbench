@@ -8,3 +8,5 @@
 //! the host-side VMM runner and result parser as they land. Kept as a
 //! library so non-CLI consumers — tests, benches, future TUIs — don't
 //! pull in clap or tracing-subscriber.
+
+pub mod util;
