@@ -11,7 +11,9 @@ authors = ["LingCage <maintainers@lingcage.com>"]
 [workspace.dependencies]
 anyhow = "1"
 reqwest = { version = "0.12", default-features = false, features = ["blocking", "rustls-tls"] }
+serde = { version = "1", features = ["derive"] }
 sha2 = "0.10"
+toml = "0.8"
 tracing = "0.1"
 
 [package]
@@ -29,7 +31,9 @@ path = "src/lib/lib.rs"
 [dependencies]
 anyhow.workspace = true
 reqwest.workspace = true
+serde.workspace = true
 sha2.workspace = true
+toml.workspace = true
 tracing.workspace = true
 
 [profile.release]

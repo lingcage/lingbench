@@ -9,4 +9,7 @@
 //! library so non-CLI consumers — tests, benches, future TUIs — don't
 //! pull in clap or tracing-subscriber.
 
+pub mod config;
 pub mod util;
+
+pub use config::{Config, KernelConfig, RootfsConfig, RootfsFormat};

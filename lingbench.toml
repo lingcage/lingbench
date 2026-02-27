@@ -1,0 +1,12 @@
+workdir = "build"
+
+[kernel]
+version = "6.12.20"
+arch = "x86_64"
+config_fragment = "guest/kernel/microvm.config"
+
+[rootfs]
+containerfile = "guest/rootfs/Containerfile"
+size_mib = 512
+builder = "podman"
+formats = ["ext4", "cpio"]
