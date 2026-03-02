@@ -10,6 +10,7 @@
 //! pull in clap or tracing-subscriber.
 
 pub mod config;
+pub mod kernel;
 pub mod util;
 
 pub use config::{Config, KernelConfig, RootfsConfig, RootfsFormat};
