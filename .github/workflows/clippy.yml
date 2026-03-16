@@ -1,0 +1,10 @@
+name: clippy
+
+on:
+  pull_request:
+
+jobs:
+  clippy:
+    uses: ./.github/workflows/per-commit.yml
+    with:
+      run: cargo clippy --workspace --all-targets --locked -- -D warnings
