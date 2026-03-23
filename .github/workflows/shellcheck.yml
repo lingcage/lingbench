@@ -1,0 +1,12 @@
+name: shellcheck
+
+on:
+  pull_request:
+
+jobs:
+  shellcheck:
+    uses: ./.github/workflows/per-commit.yml
+    with:
+      run: |
+        find . -type f -name '*.sh' -not -path './target/*' -print0 \
+          | xargs -0 -r shellcheck
