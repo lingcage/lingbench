@@ -92,6 +92,14 @@ To build locally you need, on the host:
 
 - **cpio** — only needed when the `cpio` rootfs format is requested.
 
+On DEB distros:
+
+```sh
+sudo apt-get update && sudo apt-get install -y \
+    build-essential make bc bison flex libssl-dev libelf-dev \
+    cpio tar xz-utils e2fsprogs podman
+```
+
 ## Building
 
 ```sh
