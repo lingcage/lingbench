@@ -1,0 +1,59 @@
+name: release
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: 'Version to release (without the leading v)'
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (without the leading v)'
+        required: true
+        type: string
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential make bc bison flex libssl-dev libelf-dev \
+            cpio tar xz-utils e2fsprogs podman
+
+      - name: Install Rust toolchain
+        run: rustup show active-toolchain || rustup toolchain install
+
+      - name: Build lingbench CLI
+        run: cargo build --release --locked
+
+      - name: Build guest kernel and rootfs
+        run: ./target/release/lingbench build all
+
+      - name: Stage release artifacts
+        run: |
+          mkdir -p release
+          cp build/kernel/bzImage      release/lingbench-kernel-x86_64
+          cp build/rootfs/rootfs.ext4  release/lingbench-rootfs.ext4
+          cp build/rootfs/rootfs.cpio  release/lingbench-rootfs.cpio
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ inputs.version }}
+          name: v${{ inputs.version }}
+          target_commitish: ${{ github.sha }}
+          files: |
+            release/lingbench-kernel-x86_64
+            release/lingbench-rootfs.ext4
+            release/lingbench-rootfs.cpio
+          fail_on_unmatched_files: true
+          generate_release_notes: true
