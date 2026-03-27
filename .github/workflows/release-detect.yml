@@ -1,0 +1,60 @@
+name: release-detect
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'Cargo.toml'
+
+jobs:
+  detect:
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.check.outputs.version }}
+      release: ${{ steps.check.outputs.release }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect version change
+        id: check
+        env:
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.event.after }}
+        run: |
+          set -euo pipefail
+
+          read_version() {
+            python3 -c '
+          import sys, tomllib
+          print(tomllib.load(sys.stdin.buffer)["workspace"]["package"]["version"])
+          '
+          }
+
+          new=$(git show "$AFTER:Cargo.toml" | read_version)
+          echo "version=$new" >> "$GITHUB_OUTPUT"
+
+          # Initial creation of main has an all-zeros "before"; nothing to
+          # compare against, so do not release.
+          if [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
+            echo "release=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          old=$(git show "$BEFORE:Cargo.toml" | read_version)
+
+          if [ "$new" != "$old" ]; then
+            echo "release=true"  >> "$GITHUB_OUTPUT"
+          else
+            echo "release=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  release:
+    needs: detect
+    if: needs.detect.outputs.release == 'true'
+    uses: ./.github/workflows/release.yml
+    with:
+      version: ${{ needs.detect.outputs.version }}
+    permissions:
+      contents: write
