@@ -1,4 +1,8 @@
 #!/bin/sh
+# SPDX-FileCopyrightText: Copyright (c) 2026 LingCage. All rights reserved.
+#
+# SPDX-License-Identifier: Apache-2.0
+
 # lingbench in-guest benchmark dispatcher.
 #
 # Invoked by the host-side runner (over vsock, ssh, or the serial
